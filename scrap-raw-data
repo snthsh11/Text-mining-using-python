@@ -1,0 +1,75 @@
+# -*- coding: utf-8 -*-
+"""
+Created on Tue May 26 11:13:02 2015
+
+@author: Santhosh
+"""
+
+import urllib2
+import re
+
+browser=urllib2.build_opener()
+browser.addheaders=[('User-agent', 'Mozilla/5.0')]
+
+#filereader contains the unique user name for each reviewer
+fileReader=open('reviewerLink.txt','r')
+fileWriter=open('reviewwrite.txt','w')
+a=''
+total=0
+for each in fileReader.readlines():
+    author=each.strip()
+    page=1
+    LastPage=2
+    # page and LastPage are logical variables to iterate each page until it reaches last page for each reviewer
+    while page<LastPage:  
+        url='http://www.rottentomatoes.com/critic/'+str(author)+'/?cats=&genreid=&letter=&switches=&sortby=&limit=50&page='+str(page)
+        response=browser.open(url)
+        myHTML=response.read()
+        html=re.search('<div class="scrollable-table"> <table class="table(.*?)</div> <div> Showing.*? - (.*?) of (.*?)</div>',myHTML,re.S)
+        
+        # this is to ignore junk htmls or removed webpages
+        if html is None:
+            break
+        mainpage=html.group(1)
+        currentcount=int(html.group(2))
+        lastcount=int(html.group(3))
+        if currentcount==lastcount:
+            page+=1
+        else:
+            page+=1
+            LastPage+=1
+        # main content from which all the required data is parsed    
+        groupMatches=re.finditer('<tr> <td> <span class="(.*?)</td> </tr>',mainpage,re.S)
+        for every in groupMatches:
+            every1=every.group(1)
+            select=re.search('icon (.*?)" title=".*?"></span>(.*?)</td> <td> <span class="tMeterIcon tiny(.*?)">.*?data-pageheader="" href="(.*?)">.*?<div class="subtle small"> Posted (.*?)</div>',every1,re.S)
+            reviewchunk=re.search('"nofollow"class="unstyled articleLink">(.*?)</a>',every1,re.S)
+            rottenstyle=select.group(1)
+            rating=select.group(2)
+            tscore=select.group(3).strip()
+            movieLink=select.group(4)
+            posteddate=select.group(5)
+            # Real time data contains numerous different structures and missing data. To capture all the differences this is used
+            if reviewchunk is not None:
+                review=reviewchunk.group(1)
+                
+            if reviewchunk is None:
+                #reviewchunk1=re.search('<a class="unstyled articleLink" href=".*?">(.*?)</a>',every1,re.S)
+                review='NA'
+                
+            if rating==a:
+                rating='NA'
+            if tscore=='noRating':
+                tscore='No Score Yet'
+                fileWriter1.write(rottenstyle+'##'+str(rating)+'##'+str(tscore)+'##'+movieLink+'##'+review+'##'+posteddate+'##'+author+'\n')
+                total=total+1
+            else:
+                tscore=re.search('<span class="tMeterScore">(.*?)</span>',every1,re.S).group(1)
+                fileWriter1.write(rottenstyle+'##'+str(rating)+'##'+str(tscore)+'##'+movieLink+'##'+review+'##'+posteddate+'##'+author+'\n')
+                total=total+1
+                
+    #total number of reviews read and written to the file. This is to give idea of how many reviews are scraped. 
+    #This will utilize some resources. It is optional
+    print total  
+fileReader.close()
+fileWriter.close()
