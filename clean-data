@@ -1,0 +1,119 @@
+# -*- coding: utf-8 -*-
+"""
+Created on Fri Jun 19 13:52:50 2015
+
+@author: Santhosh
+This code will clean the scrapped data so that it is easy for algorithms to look for same words. With month of year, we are categorizing
+released period as summer, spring, autumn or winter. Actors, directors, writers, genres, released, production company, rating and
+description are preceded by keyword depending on the category so that algorithm understands each variable differently. Keyword
+for actor can be anything like act or actr or just a. Algorithm treats all the words same but it should be unique for the variable.
+For our understanding we have actor before actors and so on.
+"""
+import re
+#filereader has data scrapped from previos steps
+fileReader=open('movieinfo_data.txt','r')
+#filewriter will have cleaned data for analysis
+fileWriter=open('movieinfo_cleaned.txt','w')
+
+summer=['jun','jul','aug']
+spring=['mar','apr','may']
+autumn=['sep','oct','nov']
+winter=['dec','jan','feb']
+this=''
+for each in fileReader.readlines():
+     eachline=each.strip()
+     line=eachline.split('##')
+     movielink=line[0]
+     description=line[1]
+     rating=line[2].lower()
+     genre=line[3]
+     director=line[4]
+     writer=line[5]
+     release=line[6]
+     production=line[9]
+     actor=line[10]
+     #using re.sub to substitute special characters. I have also converted all the chacrs to lowercase so there is no difference.
+     if description is None:
+         descrip_cs=''
+     else:
+         descrip_c=re.sub(r'([^\s\w]|_)+','', description)
+         descrip_cs=descrip_c.lower()
+     if rating<>'unrated' or 'na':
+         rating_cs=''
+     else:
+         rating_c3=re.search('\(',rating)
+         if rating_c3 is not None:
+             rating_c2=rating_c3.split("(")
+             rating_c1=rating_c2[0]
+             rating_c0=re.sub(r'\W+', '', rating_c1)
+             rating_c=rating_c0.lower()
+             rating_cs='rating_'+rating_c
+     if genre<>'NA':
+         gen=[]
+         genre_s=genre.split(',')
+         for e in genre_s:
+             genre_c=(re.sub(r'\W+', '_',e))
+             genre_l=genre_c.lower()
+             genre_f='genre_'+genre_l
+             gen.append(genre_f)
+             
+         genre_cs=' '.join(gen)
+     else:
+         genre_cs=''
+     if director<>'NA':
+         di=[]
+         direc_s=director.split(',')
+         for d in direc_s:
+             direc_f='director_'+d
+             di.append(direc_f)
+         direc_cs=' '.join(di)
+     else:
+         direc_cs=''
+     if writer<>'NA':
+         wi=[]
+         writer_s=writer.split(',')
+         for w in writer_s:
+             writer_f='writer_'+w
+             wi.append(writer_f)
+         writer_cs=' '.join(wi)
+     else:
+         writer_cs=''
+     if actor<>'NA':
+         act=[]
+         actor_s=actor.split(',')
+         for ac in actor_s:
+             actor_f='actor_'+ac
+             act.append(actor_f)
+         actor_cs=' '.join(act)
+     else:
+         actor_cs=''
+     if production<>'NA':
+         pro1=re.sub('\.','',production)
+         pro=re.sub(r'\W+','_',pro1)
+         pro_c=pro.lower()
+         pro_cs='production_company_'+pro_c
+     else:
+         pro_cs=''
+     if release<>'NA':
+         re1=release.strip()
+         re2=re1.split()
+         month=re2[0]
+         month=month.lower()
+         year=re2[2]
+         if month in summer:
+             release_cs='released_summer'
+         if month in spring:
+             release_cs='released_spring'
+         if month in autumn:
+             release_cs='released_autumn'
+         if month in winter:
+             release_cs='released_winter'
+             
+         year_cs='year_released_'+str(year)
+     else:
+         release_cs=''
+         year_cs=''
+    
+     fileWriter.write(movielink+'##'+descrip_cs+' '+rating_cs+' '+genre_cs+' '+direc_cs+' '+writer_cs+' '+pro_cs+' '+actor_cs+' '+release_cs+' '+year_cs+'\n')
+fileReader.close()
+fileWriter.close()
