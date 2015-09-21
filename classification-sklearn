@@ -1,0 +1,50 @@
+"""
+A simple script that demonstrates how we classify textual data with sklearn.
+"""
+"""
+TFIDF takes into account that:
+-longer docs are expected to have higher word counts. Which is more likely to be negative? A 50 word doc
+that contains the word 'terrible' 5 times or a 1000 word doc that contains the word 'terrible' 7 times?
+-words that appear in many docs are not informative (think of stopwords)
+"""
+import glob
+import os
+from sklearn.feature_extraction.text import CountVectorizer
+from sklearn.feature_extraction.text import TfidfTransformer
+from sklearn import cross_validation
+from sklearn.svm import LinearSVC
+
+path=r'C:\Users\Santhoshkumar\Downloads\ReviewerDocs\ReviewerDocs\*.txt'
+files=glob.glob(path)
+fileWriter=open('RT_ReviewerAccuracy.txt','w')
+#read the reviews and their polarities
+reviews=[]
+polarities=[]
+#For each files in the above path open all the text files and do the following
+for file in files:
+    f=open(file,'r')
+    name=os.path.splitext(os.path.basename(file))[0]
+    for line in f:
+        try:
+            review,rating=line.strip().split('\t')
+            review=review.encode('utf-8')
+            reviews.append(review.lower())    
+            polarities.append(int(rating))
+        except ValueError:
+            continue
+    f.close()
+    
+    #count the number of times each term appears in a document and transform each doc into a count vector
+    counter = CountVectorizer()
+    counts = counter.fit_transform(reviews)
+    
+    #transform the counts into the tfidfd format. http://en.wikipedia.org/wiki/Tf%E2%80%93idf
+    transformer = TfidfTransformer().fit(counts)
+    transformedPoints = transformer.transform(counts)
+    
+    #perform a multi-fold cross validation and get the accuracy for each fold
+    s=cross_validation.cross_val_score(LinearSVC(), transformedPoints, polarities, cv=10)
+    accuracy= sum(s)/len(s)
+    #write the average accuracy for ten fold in a file
+    fileWriter.write(name+'##'+str(accuracy)+'\n')
+fileWriter.close()   
