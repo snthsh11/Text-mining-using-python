@@ -1,0 +1,129 @@
+# -*- coding: utf-8 -*-
+"""
+Created on Thu Jun 04 17:09:38 2015
+
+@author: Santhosh
+"""
+
+import urllib2
+import re
+
+browser=urllib2.build_opener()
+browser.addheaders=[('User-agent','Mozilla/5.0')]
+#Filereader contains list of movies
+fileReader=open('movieList.txt','r')
+fileWriter=open('moviedetails.txt','w')
+fileWriter1=open('NotFoudHtmls.txt','w')
+
+for each in fileReader.readlines():
+    link=each.strip()
+    #try loading the urls,except HTTPErrors
+    try:
+        url='http://www.rottentomatoes.com'+str(link)
+        response=browser.open(url)
+        myHTML=response.read()
+        
+        #Lot of movies have missing columns.To capture this include 'NA' if the column is missing
+        summary=re.search('class="movie_synopsis" style="clear:both">(.*?)</p>',myHTML,re.S)
+        rated=re.search('<tr> <td class="subtle bold">Rating:</td> <td itemprop="contentRating">(.*?)</td>',myHTML,re.S)
+        genreList=re.search('<tr> <td class="subtle bold">Genre:(.*?)</td> </tr>',myHTML,re.S)
+        directorList=re.search('<tr> <td class="subtle bold">Directed By:(.*?)</td> </tr>',myHTML,re.S)
+        writerList=re.search('<tr> <td class="subtle bold">Written By:(.*?)</td> </tr>',myHTML,re.S)
+        releaseDate=re.search('<tr> <td class="subtle bold">In Theaters:</td> <td itemprop="datePublished" content=".*?">(.*?)</td>',myHTML,re.S)
+        boxoffice=re.search('<tr> <td class="subtle bold">Box Office:</td> <td>(.*?)</td>',myHTML,re.S)
+        runtime=re.search('<tr> <td class="subtle bold">Runtime:</td> <td> <time itemprop="duration" datetime=".*?">(.*?)</time>',myHTML,re.S)
+        production=re.search('<span itemprop="productionCompany">(.*?)</span>',myHTML,re.S)
+        castlist=re.search('<div class="castSection borderTop">(.*?)<h2 class="panel-heading">Friend Ratings',myHTML,re.S)
+        criticScore=re.search('<meta name="twitter:data1" content="(.*?)">',myHTML,re.S)
+        audienceScore=re.search('<meta name="twitter:data2" content="(.*?)">',myHTML,re.S)
+        if summary is None:
+            synop3='NA'
+        if rated is None:
+            rated1='NA'
+        if genreList is None:
+            genre='NA'
+        if directorList is None:
+            director='NA'
+        if writerList is None:
+            writer='NA'
+        if releaseDate is None:
+            dateReleased='NA'
+        if boxoffice is None:
+            box='NA'
+        if runtime is None:
+            runtiming='NA'
+        if production is None:
+            productionCompany='NA'
+        if castlist is None:
+            cast='NA'
+        if criticScore is None:
+            cScore='NA'
+        if audienceScore is None:
+            aScore='NA'
+        if summary is not None:
+            synopsis=summary.group(1).strip()
+            synop1=re.search('<span id="(.*?)">',synopsis,re.S)
+            if synop1 is None:
+                synop3=synopsis
+            else:
+                synop2=re.search('(.*?)</span>',synopsis,re.S).group(1)
+                #synop=synop2.group(1)
+                synop3=re.sub('<span id="(.*?)">','',synop2,re.S)
+            #synop2=re.sub('<a href=(.*?)</a>','',synop1,re.S)
+            #synop3=re.sub('</span>','',synop2,re.S)      
+        if rated is not None:
+            rated1=rated.group(1)
+        if genreList is not None:
+            genres=genreList.group(1)
+            g=re.finditer('<span itemprop="genre">(.*?)</span>',genres,re.S)
+            #list is defined to include more than one genre and write all of them seperated by comma
+            gen=[]
+            for everygenre in g:
+                every1=everygenre.group(1)
+                gen.append(every1)
+            genre=','.join(gen)
+        if directorList is not None:
+            direct=directorList.group(1)
+            d=re.finditer('<a class="a" href="/celebrity/(.*?)/"',direct,re.S)
+            #list is defined to include more than one director and write all of them seperated by comma
+            di=[]
+            for everydirector in d:
+                every2=everydirector.group(1)
+                di.append(every2)
+            director=','.join(di)
+        if writerList is not None:
+            writee=writerList.group(1)
+            w=re.finditer('<a class="a" href="/celebrity/(.*?)/"',writee,re.S)
+            #list is defined to include more than one writer and write all of them seperated by comma
+            wi=[]
+            for everywriter in w:
+                every3=everywriter.group(1)
+                wi.append(every3)
+            writer=','.join(wi)
+        if releaseDate is not None:
+            dateReleased=releaseDate.group(1)
+        if boxoffice is not None:
+            box=boxoffice.group(1)
+        if runtime is not None:
+            runtiming=runtime.group(1)
+        if production is not None:
+            productionCompany=production.group(1)
+        if castlist is not None:
+            castchunk=castlist.group(1)
+            c=re.finditer('<a class="unstyled articleLink" href="/celebrity/(.*?)/"',castchunk,re.S)
+            ca=[]
+            for everyactor in c:
+                every4=everyactor.group(1)
+                ca.append(every4)
+            cast=','.join(ca)
+        if criticScore is not None:
+            cScore=criticScore.group(1)
+        if audienceScore is not None:
+            aScore=audienceScore.group(1)    
+        #I have used '##' as seperator as it is clear and shows missing values distinctively
+        fileWriter.write(synop3+'##'+rated1+'##'+genre+'##'+director+'##'+writer+'##'+str(dateReleased)+'##'+str(box)+'##'+str(runtiming)+'##'+productionCompany+'##'+cast+'##'+str(cScore)+'##'+str(aScore)+'\n')
+    except urllib2.HTTPError:
+        fileWriter1.write(url+'/n') 
+fileReader.close()
+fileWriter.close()
+fileWriter1.close()
